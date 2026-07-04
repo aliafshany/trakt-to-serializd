@@ -154,3 +154,10 @@ class TraktAPI:
             page += 1
 
         return all_shows
+
+    def get_show_progress(self, show_id: int) -> dict:
+        resp = self.session.get(f'/shows/{show_id}/progress/watched', params={'hidden': 'false', 'specials': 'false', 'count_specials': 'false'})
+        if not resp.is_success:
+            self.logger.error(f'Trakt returned status code: {resp.status_code}')
+            raise TraktError(f'Trakt returned status code: {resp.status_code}')
+        return resp.json()

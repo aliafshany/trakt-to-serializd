@@ -59,7 +59,18 @@ class Migrator:
             total=len(watched_data)
         ):
             complete_seasons = []
-            for watched_season in watched_show.get('seasons', []):
+            
+            show_id = watched_show['show']['ids']['trakt']
+            try:
+                progress = self.trakt.get_show_progress(show_id)
+            except TraktError:
+                continue
+
+            for watched_season in progress.get('seasons', []):
+                watched_eps = [ep for ep in watched_season.get('episodes', []) if ep.get('completed')]
+                if not watched_eps:
+                    continue
+
                 self.logger.info(
                     'Updating season %d of show "%s"',
                     watched_season['number'],
@@ -75,7 +86,7 @@ class Migrator:
                         show_id=watched_show['show']['ids']['tmdb'],
                         season_number=watched_season['number']
                     )
-                    mark_full_season = len(season_info.episodes) == len(watched_season['episodes'])
+                    mark_full_season = len(season_info.episodes) == len(watched_eps)
                 except EmptySeasonError:
                     self.logger.warning(
                         'Serializd returned no episodes, marking entire season as watched'
@@ -89,7 +100,7 @@ class Migrator:
                 self.serializd.log_episodes(
                     show_id=watched_show['show']['ids']['tmdb'],
                     season_id=season_info.seasonId,
-                    episode_numbers=[ep['number'] for ep in watched_season['episodes']]
+                    episode_numbers=[ep['number'] for ep in watched_eps]
                 )
 
             if complete_seasons:
