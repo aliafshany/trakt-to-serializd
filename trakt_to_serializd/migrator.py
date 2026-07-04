@@ -63,7 +63,8 @@ class Migrator:
             show_id = watched_show['show']['ids']['trakt']
             try:
                 progress = self.trakt.get_show_progress(show_id)
-            except TraktError:
+            except Exception as e:
+                self.logger.error("Failed to fetch progress for show %s: %s", show_id, e)
                 continue
 
             for watched_season in progress.get('seasons', []):
@@ -92,22 +93,31 @@ class Migrator:
                         'Serializd returned no episodes, marking entire season as watched'
                     )
                     mark_full_season = True
+                except Exception as e:
+                    self.logger.error("Failed to fetch season info: %s", e)
+                    continue
 
                 if mark_full_season:
                     complete_seasons.append(season_info.seasonId)
                     continue
 
-                self.serializd.log_episodes(
-                    show_id=watched_show['show']['ids']['tmdb'],
-                    season_id=season_info.seasonId,
-                    episode_numbers=[ep['number'] for ep in watched_eps]
-                )
+                try:
+                    self.serializd.log_episodes(
+                        show_id=watched_show['show']['ids']['tmdb'],
+                        season_id=season_info.seasonId,
+                        episode_numbers=[ep['number'] for ep in watched_eps]
+                    )
+                except Exception as e:
+                    self.logger.error("Failed to log episodes: %s", e)
 
             if complete_seasons:
-                self.serializd.log_seasons(
-                    show_id=watched_show['show']['ids']['tmdb'],
-                    season_ids=complete_seasons
-                )
+                try:
+                    self.serializd.log_seasons(
+                        show_id=watched_show['show']['ids']['tmdb'],
+                        season_ids=complete_seasons
+                    )
+                except Exception as e:
+                    self.logger.error("Failed to log seasons: %s", e)
 
     def trakt_login(self):
         if self.use_credentials_store:
