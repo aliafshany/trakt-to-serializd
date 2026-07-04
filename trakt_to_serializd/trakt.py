@@ -126,7 +126,7 @@ class TraktAPI:
 
         return resp.json()
 
-    def get_watched_shows(self, username: str) -> dict:
+    def get_watched_shows(self, username: str) -> list:
         """
         Fetches watched shows for a given user
 
@@ -134,14 +134,23 @@ class TraktAPI:
             username: Trakt username
 
         Returns:
-            dict: Watched show data
+            list: Watched show data
 
         Raises:
             TraktError: Unexpected response
         """
-        resp = self.session.get(f'/users/{username}/watched/shows')
-        if not resp.is_success:
-            self.logger.error(f'Trakt returned status code: {resp.status_code}')
-            raise TraktError(f'Trakt returned status code: {resp.status_code}')
+        all_shows = []
+        page = 1
+        while True:
+            resp = self.session.get(f'/users/{username}/watched/shows', params={'page': page, 'limit': 250})
+            if not resp.is_success:
+                self.logger.error(f'Trakt returned status code: {resp.status_code}')
+                raise TraktError(f'Trakt returned status code: {resp.status_code}')
+            all_shows.extend(resp.json())
+            
+            page_count = int(resp.headers.get('x-pagination-page-count', 1))
+            if page >= page_count:
+                break
+            page += 1
 
-        return resp.json()
+        return all_shows

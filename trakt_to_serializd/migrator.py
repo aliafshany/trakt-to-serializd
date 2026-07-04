@@ -59,7 +59,7 @@ class Migrator:
             total=len(watched_data)
         ):
             complete_seasons = []
-            for watched_season in watched_show['seasons']:
+            for watched_season in watched_show.get('seasons', []):
                 self.logger.info(
                     'Updating season %d of show "%s"',
                     watched_season['number'],
